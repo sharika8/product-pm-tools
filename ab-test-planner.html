@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A/B Test Planner</title>
+<style>
+  :root {
+    --white: #FFFFFF;
+    --bg: #F8FAFC;
+    --surface: #FFFFFF;
+    --border: #E2E8F0;
+    --border-light: #F1F5F9;
+    --text: #1E293B;
+    --text-muted: #64748B;
+    --text-light: #94A3B8;
+    --accent: #0D9488;
+    --accent-light: #CCFBF1;
+    --accent-dark: #0F766E;
+    --warning: #D97706;
+    --warning-light: #FEF3C7;
+    --purple: #7C3AED;
+    --purple-light: #EDE9FE;
+    --blue: #2563EB;
+    --blue-light: #DBEAFE;
+    --rose: #E11D48;
+    --rose-light: #FFE4E6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .logo {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .header-text h1 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+
+  .header-text p {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .powered {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+
+  .input-section {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 32px;
+  }
+
+  .input-label {
+    padding: 16px 20px 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+
+  textarea {
+    width: 100%;
+    border: none;
+    outline: none;
+    padding: 12px 20px 16px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
+    resize: none;
+    min-height: 120px;
+    background: transparent;
+  }
+
+  textarea::placeholder { color: var(--text-light); }
+
+  .input-footer {
+    border-top: 1px solid var(--border-light);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg);
+  }
+
+  .char-count {
+    font-size: 11px;
+    color: var(--text-light);
+  }
+
+  .generate-btn {
+    margin-left: auto;
+    padding: 9px 20px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+  }
+
+  .generate-btn:hover { background: var(--accent-dark); }
+  .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .spinner {
+    width: 13px;
+    height: 13px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Output */
+  .output { display: none; }
+  .output.visible { display: block; }
+
+  .output-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .output-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+
+  .copy-all-btn {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: white;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .copy-all-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .copy-all-btn.copied {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-light);
+  }
+
+  /* Plan cards */
+  .plan-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .card-body {
+    padding: 16px 20px;
+  }
+
+  /* Hypothesis card — the hero */
+  .card-hypothesis {
+    border-left: 3px solid var(--accent);
+  }
+
+  .card-hypothesis .card-icon {
+    background: var(--accent-light);
+  }
+
+  .hypothesis-text {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
+    font-style: italic;
+  }
+
+  /* Variants card */
+  .card-variants .card-icon { background: var(--blue-light); }
+
+  .variant-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .variant-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+
+  .variant-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.04em;
+  }
+
+  .variant-label.control { color: var(--text-muted); }
+  .variant-label.variant { color: var(--accent); }
+
+  .variant-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  /* Metrics card */
+  .card-metrics .card-icon { background: var(--purple-light); }
+
+  .metric-item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .metric-item:last-child { border-bottom: none; }
+
+  .metric-type {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 3px;
+  }
+
+  .metric-type.primary { color: var(--purple); }
+
+  .metric-name {
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  /* Duration card */
+  .card-duration .card-icon { background: var(--warning-light); }
+
+  .duration-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .duration-item {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+  }
+
+  .duration-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .duration-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .duration-unit {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  /* Acceptance criteria card */
+  .card-criteria .card-icon { background: var(--accent-light); }
+
+  .criteria-list {
+    list-style: none;
+  }
+
+  .criteria-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+    display: flex;
+    gap: 10px;
+  }
+
+  .criteria-list li:last-child { border-bottom: none; }
+
+  .criteria-list li::before {
+    content: "→";
+    color: var(--accent);
+    flex-shrink: 0;
+    font-size: 12px;
+    margin-top: 2px;
+  }
+
+  /* Risks card */
+  .card-risks .card-icon { background: var(--rose-light); }
+
+  .risk-item {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+    display: flex;
+    gap: 10px;
+  }
+
+  .risk-item:last-child { border-bottom: none; }
+
+  .risk-item::before {
+    content: "⚠";
+    color: var(--rose);
+    flex-shrink: 0;
+    font-size: 11px;
+    margin-top: 2px;
+  }
+
+  /* Empty and error states */
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text-light);
+  }
+
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-state p { font-size: 13px; max-width: 280px; margin: 0 auto; line-height: 1.6; }
+
+  .error-card {
+    background: #FFF1F2;
+    border: 1px solid #FECDD3;
+    border-radius: 10px;
+    padding: 16px 20px;
+    color: var(--rose);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 600px) {
+    .variant-row { grid-template-columns: 1fr; }
+    .duration-grid { grid-template-columns: 1fr; }
+    .main { padding: 20px 16px 48px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⚡</div>
+  <div class="header-text">
+    <h1>A/B Test Planner</h1>
+    <p>Turn a feature idea into a structured test plan</p>
+  </div>
+  <div class="powered">Powered by Claude</div>
+</header>
+
+<div class="main">
+
+  <div class="input-section">
+    <div class="input-label">What do you want to test?</div>
+    <textarea
+      id="input"
+      placeholder="Describe your feature idea or what you want to test. For example:
+
+We want to test showing a progress bar on the checkout page to see if it reduces drop-off at the payment step."
+      oninput="updateCount()"
+    ></textarea>
+    <div class="input-footer">
+      <span class="char-count" id="char-count">0 characters</span>
+      <button class="generate-btn" id="gen-btn" onclick="generate()">
+        <div class="spinner" id="spinner"></div>
+        <span id="btn-text">Generate test plan</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="output" id="output">
+    <div class="output-header">
+      <span class="output-title">TEST PLAN</span>
+      <button class="copy-all-btn" id="copy-btn" onclick="copyAll()">
+        📋 Copy plan
+      </button>
+    </div>
+    <div id="plan-content"></div>
+  </div>
+
+  <div id="empty-state" class="empty-state">
+    <div class="empty-icon">⚡</div>
+    <p>Describe what you want to test and get a structured A/B test plan in seconds.</p>
+  </div>
+
+</div>
+
+<script>
+  function updateCount() {
+    const len = document.getElementById('input').value.length;
+    document.getElementById('char-count').textContent = `${len} character${len !== 1 ? 's' : ''}`;
+  }
+
+  async function copyAll() {
+    const content = document.getElementById('plan-content').innerText;
+    await navigator.clipboard.writeText(content);
+    const btn = document.getElementById('copy-btn');
+    btn.classList.add('copied');
+    btn.innerHTML = '✓ Copied!';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = '📋 Copy plan';
+    }, 2000);
+  }
+
+  function renderPlan(data) {
+    const c = document.getElementById('plan-content');
+    c.innerHTML = '';
+
+    // Hypothesis
+    c.innerHTML += `
+      <div class="plan-card card-hypothesis">
+        <div class="card-header">
+          <div class="card-icon">💡</div>
+          <div class="card-title">Hypothesis</div>
+        </div>
+        <div class="card-body"
+          <div class="hypothesis-text">${data.hypothesis}</div>
+        </div>
+      </div>`;
+
+    // Variants
+    c.innerHTML += `
+      <div class="plan-card card-variants">
+        <div class="card-header">
+          <div class="card-icon">🔀</div>
+          <div class="card-title">Variants</div>
+        </div>
+        <div class="card-body">
+          <div class="variant-row">
+            <div class="variant-box">
+              <div class="variant-label control">CONTROL (A)</div>
+              <div class="variant-text">${data.control}</div>
+            </div>
+            <div class="variant-box">
+              <div class="variant-label variant">VARIANT (B)</div>
+              <div class="variant-text">${data.variant}</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    // Metrics
+    const metricsHtml = data.metrics.map(m => `
+      <div class="metric-item">
+        <div class="metric-type ${m.type === 'Primary' ? 'primary' : ''}">${m.type}</div>
+        <div class="metric-name">${m.name}</div>
+      </div>`).join('');
+
+    c.innerHTML += `
+      <div class="plan-card card-metrics">
+        <div class="card-header">
+          <div class="card-icon">📊</div>
+          <div class="card-title">Success Metrics</div>
+        </div>
+        <div class="card-body">${metricsHtml}</div>
+      </div>`;
+
+    // Duration
+    c.innerHTML += `
+      <div class="plan-card card-duration">
+        <div class="card-header">
+          <div class="card-icon">⏱</div>
+          <div class="card-title">Duration & Sample</div>
+        </div>
+        <div class="card-body">
+          <div class="duration-grid">
+            <div class="duration-item">
+              <div class="duration-label">Minimum duration</div>
+              <div class="duration-value">${data.duration} <span class="duration-unit">weeks</span></div>
+            </div>
+            <div class="duration-item">
+              <div class="duration-label">Confidence level</div>
+              <div class="duration-value">95<span class="duration-unit">%</span></div>
+            </div>
+          </div>
+          <p style="margin-top:12px;font-size:12px;color:var(--text-muted);line-height:1.6;">${data.duration_note}</p>
+        </div>
+      </div>`;
+
+    // Acceptance criteria
+    const criteriaHtml = data.criteria.map(c => `<li>${c}</li>`).join('');
+    c.innerHTML += `
+      <div class="plan-card card-criteria">
+        <div class="card-header">
+          <div class="card-icon">✅</div>
+          <div class="card-title">Ship / No-Ship Criteria</div>
+        </div>
+        <div class="card-body"
+          <ul class="criteria-list">${criteriaHtml}</ul>
+        </div>
+      </div>`;
+
+    // Risks
+    const risksHtml = data.risks.map(r => `<div class="risk-item">${r}</div>`).join('');
+    c.innerHTML += `
+      <div class="plan-card card-risks">
+        <div class="card-header">
+          <div class="card-icon">⚠️</div>
+          <div class="card-title">Risks & Watch-outs</div>
+        </div>
+        <div class="card-body">${risksHtml}</div>
+      </div>`;
+  }
+
+  async function generate() {
+    const input = document.getElementById('input').value.trim();
+    if (!input) return;
+
+    const btn = document.getElementById('gen-btn');
+    btn.disabled = true;
+    document.getElementById('spinner').style.display = 'block';
+    document.getElementById('btn-text').textContent = 'Generating...';
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('output').classList.remove('visible');
+
+    const prompt = `You are an expert product manager helping structure A/B tests properly.
+
+Given a feature idea or test description, generate a structured A/B test plan as JSON.
+
+Return ONLY valid JSON with this exact structure:
+{
+  "hypothesis": "If we [change], then [metric] will [direction] because [reason based on user insight]",
+  "control": "Description of what the control group (A) sees or experiences",
+  "variant": "Description of what the variant group (B) sees or experiences",
+  "metrics": [
+    {"type": "Primary", "name": "The one metric that determines ship/no-ship decision"},
+    {"type": "Secondary", "name": "Supporting metric to watch"},
+    {"type": "Guardrail", "name": "Metric that must not decrease"}
+  ],
+  "duration": 2,
+  "duration_note": "Plain English explanation of why this duration and what to watch for",
+  "criteria": [
+    "Ship if: specific condition that means the test succeeded",
+    "No-ship if: specific condition that means the test failed",
+    "Extend if: condition where more data is needed"
+  ],
+  "risks": [
+    "Risk or watch-out 1",
+    "Risk or watch-out 2",
+    "Risk or watch-out 3"
+  ]
+}
+
+Feature idea to plan: ${input}`;
+
+    try {
+      const sample = await claude.use('sample');
+      if (!sample) throw new Error('Claude not available');
+
+      const result = await sample(prompt, { modelTier: 'default' });
+      let text = result.text.trim();
+      text = text.replace(/^```json\n?/i, '').replace(/\n?```$/i, '').trim();
+
+      const data = JSON.parse(text);
+      renderPlan(data);
+      document.getElementById('output').classList.add('visible');
+
+    } catch (err) {
+      document.getElementById('output').classList.add('visible');
+      document.getElementById('plan-content').innerHTML = `
+        <div class="error-card">
+          Could not generate test plan: ${err.message}. Please try again.
+        </div>`;
+    } finally {
+      btn.disabled = false;
+      document.getElementById('spinner').style.display = 'none';
+      document.getElementById('btn-text').textContent = 'Generate test plan';
+    }
+  }
+
+  document.getElementById('input').addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key === 'Enter') generate();
+  });
+</script>
+</body>
+</html>
