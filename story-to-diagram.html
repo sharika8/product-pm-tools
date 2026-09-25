@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Story to Diagram</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0F1724;
+    --surface: #172032;
+    --border: #1E2D45;
+    --accent: #3B82F6;
+    --accent-hover: #2563EB;
+    --text: #F0F4FF;
+    --text-muted: #6B7FA3;
+    --success: #10B981;
+    --error: #EF4444;
+    --mono: 'Courier New', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    width: 28px;
+    height: 28px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  header h1 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  header p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-left {
+    border-right: 1px solid var(--border);
+  }
+
+  .panel-header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+
+  .panel-header span {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+
+  .diagram-toggle {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+  }
+
+  .toggle-btn {
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .toggle-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .toggle-btn:hover:not(.active) {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  textarea {
+    flex: 1;
+    background: var(--bg);
+    border: none;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 20px;
+    resize: none;
+    outline: none;
+  }
+
+  textarea::placeholder {
+    color: var(--text-muted);
+    line-height: 1.8;
+  }
+
+  .panel-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+
+  .char-count {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .generate-btn {
+    margin-left: auto;
+    padding: 8px 20px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .generate-btn:hover { background: var(--accent-hover); }
+  .generate-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .output-area {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .output-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  .output-tab {
+    padding: 10px 18px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .output-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .output-tab:hover:not(.active) { color: var(--text); }
+
+  .output-content {
+    flex: 1;
+    overflow: auto;
+    padding: 20px;
+  }
+
+  .diagram-view {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+  }
+
+  .diagram-view .mermaid {
+    max-width: 100%;
+  }
+
+  .code-view {
+    display: none;
+  }
+
+  .code-view pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: #A8C4FF;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .copy-btn {
+    margin-top: 12px;
+    padding: 7px 16px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .copy-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .copy-btn.copied {
+    border-color: var(--success);
+    color: var(--success);
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 12px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .empty-icon {
+    font-size: 40px;
+    opacity: 0.4;
+  }
+
+  .empty-state p {
+    font-size: 13px;
+    max-width: 260px;
+    line-height: 1.6;
+  }
+
+  .error-state {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px;
+    padding: 16px;
+    color: #FCA5A5;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .output-footer {
+    padding: 10px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+
+  .status-dot.success { background: var(--success); }
+  .status-dot.error { background: var(--error); }
+  .status-dot.loading {
+    background: var(--accent);
+    animation: pulse 1s ease infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .status-text {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Mermaid theme override */
+  .mermaid svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  @media (max-width: 768px) {
+    .main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+    .panel-left { border-right: none; border-bottom: 1px solid var(--border); }
+    body { overflow: auto; height: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⬡</div>
+  <h1>Story to Diagram</h1>
+  <p>Powered by Claude</p>
+</header>
+
+<div class="main">
+  <!-- LEFT: Input -->
+  <div class="panel panel-left">
+    <div class="panel-header">
+      <span>Input</span>
+      <div class="diagram-toggle">
+        <button class="toggle-btn active" id="btn-sequence" onclick="setType('sequence')">Sequence</button>
+        <button class="toggle-btn" id="btn-flow" onclick="setType('flow')">Flow</button>
+      </div>
+    </div>
+
+    <textarea
+      id="input"
+      placeholder="Paste a user story or requirements text here...
+
+Example:
+As a trader, when I submit a trade at a restricted workflow stage, the system should prevent editing and notify the approver. The approver receives an alert and can approve or reject the trade. If approved, the trade moves to the next stage. If rejected, the trader is notified and the trade is returned for correction."
+      oninput="updateCharCount()"
+    ></textarea>
+
+    <div class="panel-footer">
+      <span class="char-count" id="char-count">0 characters</span>
+      <button class="generate-btn" id="generate-btn" onclick="generate()">
+        <div class="spinner" id="spinner"></div>
+        <span id="btn-text">Generate diagram</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- RIGHT: Output -->
+  <div class="panel">
+    <div class="output-tabs">
+      <div class="output-tab active" id="tab-diagram" onclick="switchTab('diagram')">Diagram</div>
+      <div class="output-tab" id="tab-code" onclick="switchTab('code')">Mermaid code</div>
+    </div>
+
+    <div class="output-content" id="output-content">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">⬡</div>
+        <p>Paste a user story or requirements text and click Generate to see the diagram.</p>
+      </div>
+
+      <div class="diagram-view" id="diagram-view" style="display:none;">
+        <div class="mermaid" id="mermaid-container"></div>
+      </div>
+
+      <div class="code-view" id="code-view">
+        <pre id="code-output"></pre>
+        <button class="copy-btn" id="copy-btn" onclick="copyCode()">
+          <span>📋</span> Copy Mermaid code
+        </button>
+      </div>
+
+      <div class="error-state" id="error-state" style="display:none;"></div>
+    </div>
+
+    <div class="output-footer">
+      <div class="status-dot" id="status-dot"></div>
+      <span class="status-text" id="status-text">Ready</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  let diagramType = 'sequence';
+  let currentCode = '';
+  let currentTab = 'diagram';
+
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'dark',
+    themeVariables: {
+      darkMode: true,
+      background: '#172032',
+      primaryColor: '#1E3A5F',
+      primaryTextColor: '#F0F4FF',
+      primaryBorderColor: '#3B82F6',
+      lineColor: '#6B7FA3',
+      secondaryColor: '#0F1724',
+      tertiaryColor: '#172032',
+      fontFamily: 'Inter, -apple-system, sans-serif',
+      fontSize: '13px',
+    }
+  });
+
+  function setType(type) {
+    diagramType = type;
+    document.getElementById('btn-sequence').classList.toggle('active', type === 'sequence');
+    document.getElementById('btn-flow').classList.toggle('active', type === 'flow');
+  }
+
+  function updateCharCount() {
+    const len = document.getElementById('input').value.length;
+    document.getElementById('char-count').textContent = `${len} character${len !== 1 ? 's' : ''}`;
+  }
+
+  function setStatus(type, text) {
+    const dot = document.getElementById('status-dot');
+    dot.className = 'status-dot' + (type ? ` ${type}` : '');
+    document.getElementById('status-text').textContent = text;
+  }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('tab-diagram').classList.toggle('active', tab === 'diagram');
+    document.getElementById('tab-code').classList.toggle('active', tab === 'code');
+
+    const diagramView = document.getElementById('diagram-view');
+    const codeView = document.getElementById('code-view');
+
+    if (tab === 'diagram') {
+      diagramView.style.display = 'flex';
+      codeView.style.display = 'none';
+    } else {
+      diagramView.style.display = 'none';
+      codeView.style.display = 'block';
+    }
+  }
+
+  async function copyCode() {
+    await navigator.clipboard.writeText(currentCode);
+    const btn = document.getElementById('copy-btn');
+    btn.classList.add('copied');
+    btn.innerHTML = '<span>✓</span> Copied!';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = '<span>📋</span> Copy Mermaid code';
+    }, 2000);
+  }
+
+  function showError(message) {
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('diagram-view').style.display = 'none';
+    document.getElementById('code-view').style.display = 'none';
+    const err = document.getElementById('error-state');
+    err.style.display = 'block';
+    err.textContent = message;
+    setStatus('error', 'Error');
+  }
+
+  async function renderMermaid(code) {
+    const container = document.getElementById('mermaid-container');
+    container.removeAttribute('data-processed');
+    container.innerHTML = code;
+
+    try {
+      await mermaid.run({ nodes: [container] });
+      document.getElementById('empty-state').style.display = 'none';
+      document.getElementById('error-state').style.display = 'none';
+      document.getElementById('diagram-view').style.display = 'flex';
+      if (currentTab === 'code') {
+        document.getElementById('diagram-view').style.display = 'none';
+      }
+      setStatus('success', 'Diagram generated');
+    } catch (e) {
+      showError(`Could not render diagram. The generated Mermaid code may have syntax issues.\n\nCode:\n${code}`);
+    }
+  }
+
+  async function generate() {
+    const input = document.getElementById('input').value.trim();
+    if (!input) {
+      showError('Please paste a user story or requirements text first.');
+      return;
+    }
+
+    // Loading state
+    const btn = document.getElementById('generate-btn');
+    btn.disabled = true;
+    document.getElementById('spinner').style.display = 'block';
+    document.getElementById('btn-text').textContent = 'Generating...';
+    setStatus('loading', 'Calling Claude...');
+
+    const typeLabel = diagramType === 'sequence' ? 'sequence diagram' : 'flowchart';
+
+    const systemPrompt = `You are an expert at reading product requirements and user stories and converting them into Mermaid diagram code.
+
+Your job is to extract the actual actors, systems, and components named in the text and use those specific names in the diagram — never use generic placeholders like "User", "System", or "Database" unless those exact words appear in the text.
+
+For sequence diagrams, use Mermaid sequenceDiagram syntax.
+For flowcharts, use Mermaid flowchart TD syntax.
+
+Rules:
+- Extract real actor and component names from the text
+- Show the complete flow including conditions, branches, and error paths
+- Keep labels concise but specific
+- Return ONLY the raw Mermaid code with no explanation, no markdown fences, no backticks
+- Start directly with "sequenceDiagram" or "flowchart TD"`;
+
+    const userPrompt = `Convert this into a ${typeLabel}. Extract the specific actors and system names from the text — do not use generic names.
+
+${input}`;
+
+    try {
+      const sample = await claude.use('sample');
+      if (!sample) throw new Error('Claude sample capability not available.');
+
+      const result = await sample(
+        `${systemPrompt}\n\n${userPrompt}`,
+        { modelTier: 'default' }
+      );
+
+      let code = result.text.trim();
+
+      // Clean up any accidental fences
+      code = code.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
+
+      currentCode = code;
+      document.getElementById('code-output').textContent = code;
+
+      await renderMermaid(code);
+
+    } catch (err) {
+      showError(`Failed to generate diagram: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+      document.getElementById('spinner').style.display = 'none';
+      document.getElementById('btn-text').textContent = 'Generate diagram';
+    }
+  }
+
+  // Allow Ctrl+Enter to generate
+  document.getElementById('input').addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'Enter') generate();
+  });
+</script>
+</body>
+</html>
